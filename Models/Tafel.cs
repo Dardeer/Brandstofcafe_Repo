@@ -1,6 +1,6 @@
 ﻿namespace NHL_Brandstofcafe.Models
 {
-    public class Tafels
+    public class Tafel
     {
         public int ID { get; set; }
         public int SectieID { get; set; }
