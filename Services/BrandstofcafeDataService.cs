@@ -20,7 +20,7 @@ namespace NHL_Brandstofcafe.Services
         {
             using (var connection = new MySqlConnection(_connectionString))
             {
-                // return new List<Sectie>(); 
+                
                 string sql = "select Id, Naam from Secties";
                 var secties = await connection.QueryAsync < Sectie> (sql);
                 return secties.ToList();
@@ -29,8 +29,12 @@ namespace NHL_Brandstofcafe.Services
 
         public async Task<List<Tafel>> GetTafelsBySectieIdAsync(int sectieId)
         {
-            await Task.Delay(1);
-            return new List<Tafel>();
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                string sql = "SELECT ID, SectieID, TafelNummer, IsBezet FROM Tafels WHERE SectieID = @SectieId";
+                var tafels = await connection.QueryAsync<Tafel>(sql, new { SectieId = sectieId });
+                return tafels.ToList();
+            }
         }
     }
 }
