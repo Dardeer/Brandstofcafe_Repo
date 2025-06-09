@@ -13,7 +13,8 @@ namespace NHL_Brandstofcafe.Services
 
         public BrandstofcafeDataService(string connectionString)
         {
-            _connectionString = connectionString;
+            _connectionString = connectionString ?? throw new ArgumentNullException
+                (nameof(connectionString), "connection String kan niet null zijn!"); 
         }
 
         public async Task<List<Sectie>> GetSectiesAsync()
