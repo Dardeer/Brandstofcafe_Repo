@@ -18,8 +18,13 @@ namespace NHL_Brandstofcafe.Services
 
         public async Task<List<Sectie>> GetSectiesAsync()
         {
-            await Task.Delay(1);
-            return new List<Sectie>();
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                // return new List<Sectie>(); 
+                string sql = "select Id, Naam from Secties";
+                var secties = await connection.QueryAsync < Sectie> (sql);
+                return secties.ToList();
+            }
         }
 
         public async Task<List<Tafel>> GetTafelsBySectieIdAsync(int sectieId)
