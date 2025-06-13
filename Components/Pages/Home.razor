@@ -8,27 +8,52 @@
 <h1 class="text-center">Welkom bij Brandstofcafé</h1>
 
 @code {
+    // VARIABELEN VOOR DATA EN STATUS
     private List<Sectie>? _secties;
     private int? _geselecteerdeSectieId; // Houde de ID van de geselecteerde sectie bij
+    private List<Tafel>? _tafelsVanGeselecteerdeSectie; // Houde de Tafels van de Geselecteerde Sectie bij
 
+    // Blazor LIFECYCLE METHODE
     protected override async Task OnInitializedAsync()
     {
         _secties = await DataService.GetSectiesAsync();
     }
-    private void SelecteerSectie (int sectieId)
+
+    // private void SelecteerSectie (int sectieId)
+    // {
+    //     _geselecteerdeSectieId = sectieId;
+    //     Console.WriteLine($"Sectie geselecteerd: ID {sectieId}");
+    // }
+
+    private async Task SelecteerSectie(int sectieId)
     {
-        _geselecteerdeSectieId = sectieId;
-        Console.WriteLine($"Sectie geselecteerd: ID {sectieId}"); // Tijdelijk voor debugging
-        StateHasChanged();
+        if (_geselecteerdeSectieId.HasValue && _geselecteerdeSectieId.Value == sectieId)
+        {
+            _geselecteerdeSectieId = null;
+            _tafelsVanGeselecteerdeSectie = null;
+            Console.WriteLine($"Sectie ID {sectieId} gedeselecteerd.");
+        }
+        else
+        {
+
+            _geselecteerdeSectieId = sectieId;
+            Console.WriteLine($"Sectie geselecteerd: ID {sectieId}");
+            _tafelsVanGeselecteerdeSectie = await DataService.GetTafelsBySectieIdAsync(sectieId);
+        }
     }
 }
 
-@if (_secties == null) {
-    <p><em>Laden van Secties ..</em></p>  // Bericht terwijl Data laadt
+@* HTML/ RAZOR VOOR WEERGAVE VAN SECTIES EN TAFELS *@
+@* SECTIES WEERGAVE *@
+@if (_secties == null)
+{
+    <p><em>Laden van Secties ..</em></p>
+    // Bericht terwijl Data laadt
 }
 
-else if (! _secties.Any()) {    //of de lijst leeg is (vai Systeem.Linq)
-    <p> Er Zijn momenteel geen secties beschikbaar in het Brandstofcafe</p>
+else if (!_secties.Any())
+{    //of de lijst leeg is (vai Systeem.Linq)
+     <p> Er Zijn momenteel geen secties beschikbaar in het Brandstofcafe</p>
 }
 else
 {
@@ -36,17 +61,41 @@ else
     <ul class="list-group">
         @foreach (var sectie in _secties)
         {
+            @* C# Ternary operator (inline if-statment) *@
             <li class="list-group-item d-flex justify-content-between align-items-center
-                @(sectie.Id == _geselecteerdeSectieId ? "active" : "") cursor-pointer"  @* C# Ternary operator (inline if-statment) *@
+                        @(sectie.Id == _geselecteerdeSectieId ? "active" : "") cursor-pointer" 
                 @onclick="() => SelecteerSectie(sectie.Id)">
                 @sectie.Naam
                 <span class="badge bg-primary rounded-pill">ID: @sectie.Id</span>
             </li>
         }
     </ul>
-    @* . . . TEST DOELEINDEN . . . *@
+    @* . . . TEST CODE, LATER WEG LATEN . . . *@
     @if (_geselecteerdeSectieId.HasValue)
     {
         <p class="mt-3"> Geselecteerde Sectie Id: @_geselecteerdeSectieId</p>
+    }
+}
+
+@* TAFELS WEERGAVE *@
+@if (_geselecteerdeSectieId.HasValue && _tafelsVanGeselecteerdeSectie != null)
+{
+    <h2 class="mt-4"> Tafels in Sectie @_geselecteerdeSectieId</h2>
+    @if (!_tafelsVanGeselecteerdeSectie.Any())
+    {
+        <p>Er zijn geen tafels gevonden voor deze sectie</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var tafel in _tafelsVanGeselecteerdeSectie)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Tafel @tafel.TafelNummer
+                    <span class="badge bg-info rounded-pill">@(tafel.IsBezet ? "Bezet" : "Vrij")</span>
+                </li>    
+            }
+
+        </ul>       
     }
 }
