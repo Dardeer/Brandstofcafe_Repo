@@ -5,14 +5,21 @@
 @inject NHL_Brandstofcafe.Services.IBrandstofcafeDataService DataService
 
 <PageTitle>Home</PageTitle>
-<h1>Brandstofcafe</h1>
+<h1 class="text-center">Welkom bij Brandstofcafé</h1>
 
 @code {
     private List<Sectie>? _secties;
+    private int? _geselecteerdeSectieId; // Houde de ID van de geselecteerde sectie bij
 
     protected override async Task OnInitializedAsync()
     {
         _secties = await DataService.GetSectiesAsync();
+    }
+    private void SelecteerSectie (int sectieId)
+    {
+        _geselecteerdeSectieId = sectieId;
+        Console.WriteLine($"Sectie geselecteerd: ID {sectieId}"); // Tijdelijk voor debugging
+        StateHasChanged();
     }
 }
 
@@ -23,12 +30,23 @@
 else if (! _secties.Any()) {    //of de lijst leeg is (vai Systeem.Linq)
     <p> Er Zijn momenteel geen secties beschikbaar in het Brandstofcafe</p>
 }
-else {
-    <h2>Beschikbare Secties:</h2>   // Toen secties in een ongeirdende lijst
-    <ul>
+else
+{
+    <h2>Beschikbare Secties:</h2>
+    <ul class="list-group">
         @foreach (var sectie in _secties)
         {
-           <li>@sectie.Naam (ID: @sectie.Id)</li>         
+            <li class="list-group-item d-flex justify-content-between align-items-center
+                @(sectie.Id == _geselecteerdeSectieId ? "active" : "") cursor-pointer"  @* C# Ternary operator (inline if-statment) *@
+                @onclick="() => SelecteerSectie(sectie.Id)">
+                @sectie.Naam
+                <span class="badge bg-primary rounded-pill">ID: @sectie.Id</span>
+            </li>
         }
-   </ul>
-} 
+    </ul>
+    @* . . . TEST DOELEINDEN . . . *@
+    @if (_geselecteerdeSectieId.HasValue)
+    {
+        <p class="mt-3"> Geselecteerde Sectie Id: @_geselecteerdeSectieId</p>
+    }
+}
