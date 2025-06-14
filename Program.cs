@@ -9,12 +9,12 @@ builder.Services.AddRazorComponents()
 
 // --- START NIEUWE CODE --- 
 // De connection string uit appsettings.json ophalen
-var connectionString = builder.Configuration.GetConnectionString("BrandstofcafeDb")
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException
     ("Verbindingsreeks 'BrandstofcafeDb' niet gevonden in appsettings.json, BrandstofcafeDataService kan niet worden geregistreerd!");
 
 // Registreer IBrandstofcafeDataService en BrandstofcafeDataService voor Dependency injection
-builder.Services.AddScoped<IBrandstofcafeDataService>(provider => new BrandstofcafeDataService(connectionString));
+builder.Services.AddScoped<IBrandstofcafeDataService, BrandstofcafeDataService>();
 // --- EIND NIEUWE CODE --- 
 
 var app = builder.Build();
