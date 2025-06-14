@@ -8,5 +8,9 @@ namespace NHL_Brandstofcafe.Services
     {
         Task<List<Sectie>> GetSectiesAsync(); // Haalt asynchroon een lijst (List) van alle Secties op.
         Task<List<Tafel>> GetTafelsBySectieIdAsync(int sectieId); // Haalt asynchroon een lijst van Tafels op, gefilterd op een specifieke SectieID.
+
+        Task<List<Categorie>> GetCategorieenAsync(); // Haalt asynchroon een lijst van alle Categorieën op.
+        Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId); // Haalt asynchroon een lijst van alle Producten op, per categorie.
+        
     }
 }
