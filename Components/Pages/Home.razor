@@ -12,12 +12,16 @@
     private List<Sectie>? _secties;  
     private int? _geselecteerdeSectieId; // Houde de ID van de geselecteerde sectie bij  
     private List<Tafel>? _tafelsVanGeselecteerdeSectie; // Houde de Tafels van de Geselecteerde Sectie bij  
-    private int? _geselecteerdeTafelId;  
+    private int? _geselecteerdeTafelId;
+    private List<Categorie>? _categorieen; // Lijst van alle Categorieën
+    private int? _geselecteerdeCategorieId;
+    private List<Product>? _productenVanGeselecteerdeCategorie;
 
     // Blazor LIFECYCLE METHODE  
     protected override async Task OnInitializedAsync()  
     {  
-        _secties = await DataService.GetSectiesAsync();  
+        _secties = await DataService.GetSectiesAsync();
+        _categorieen = await DataService.GetCategorieenAsync(); 
     }  
 
     // --- EVENT HANELER : KLIK OP SECTIE ---
@@ -34,7 +38,7 @@
         else  
         {  
             _geselecteerdeSectieId = sectieId;  
-            Console.WriteLine($"Sectie geselecteerd: ID {sectieId}");  
+            Console.WriteLine($"Sectie geselecteerd: ID {sectieId}"); 
             _tafelsVanGeselecteerdeSectie = await DataService.GetTafelsBySectieIdAsync(sectieId);  
             _geselecteerdeTafelId = null;  
         }  
@@ -54,70 +58,163 @@
             _geselecteerdeTafelId = tafelId;  
             Console.WriteLine($"Tafel geselecteerd: ID {tafelId}");  
         }  
-    }  
+    }
+
+    private async Task SelecteerCategorie(int categorieId)
+    {
+        if (_geselecteerdeCategorieId.HasValue && _geselecteerdeCategorieId.Value == categorieId)
+        {
+            _geselecteerdeCategorieId = null;
+            _productenVanGeselecteerdeCategorie = null;
+            Console.WriteLine($"Categorie ID {categorieId} geselecteerd");
+        }
+        else
+        {
+            _geselecteerdeCategorieId = categorieId;
+            Console.WriteLine($"Categorie geselecteerd: ID {categorieId}");
+            _productenVanGeselecteerdeCategorie = await DataService.GetProductenByCategorieIdAsync(categorieId);
+        }
+    }
 }  
 
 @* --- HTML/ RAZOR MARKUP --- *@  
 @* --- ___SECTIES WEERGAVE___ ---*@  
-@if (_secties == null)  
-{  
-    <p><em>Laden van Secties ..</em></p>  
-    // Bericht terwijl Data laadt  
-}  
+@if (_secties == null)
+{
+    <p><em>Laden van Secties ..</em></p>
+    // Bericht terwijl Data laadt
+}
 
-else if (!_secties.Any())  
-{    //of de lijst leeg is (via Systeem.Linq)  
-     <p> Er Zijn momenteel geen secties beschikbaar in het Brandstofcafe</p>  
-}  
-else  
-{  
-    <h2>Beschikbare Secties:</h2>  
-    <ul class="list-group">  
-        @foreach (var sectie in _secties)  
-        {  
-            @* C# Ternary operator (inline if-statment) *@  
-            <li class="list-group-item d-flex justify-content-between align-items-center  
-                        @(sectie.Id == _geselecteerdeSectieId ? "active" : "") cursor-pointer"   
-                @onclick="() => SelecteerSectie(sectie.Id)">  
-                @sectie.Naam  
-                <span class="badge bg-primary rounded-pill">ID: @sectie.Id</span>  
-            </li>  
-        }  
-    </ul>  
-    @* . . . TEST CODE, UITGEBREID . . . *@  
-    @if (_geselecteerdeSectieId.HasValue)  
-    {  
-        <p class="mt-3"> Geselecteerde Sectie Id: @_geselecteerdeSectieId 
-        @if (_geselecteerdeTafelId.HasValue)
+else if (!_secties.Any())
+{    //of de lijst leeg is (via Systeem.Linq)
+     <p> Er Zijn momenteel geen secties beschikbaar in het Brandstofcafe</p>
+}
+else
+{
+    <h2>Beschikbare Secties:</h2>
+    <ul class="list-group">
+        @foreach (var sectie in _secties)
         {
-             <span> | Geselecteerde Tafel Id: @_geselecteerdeTafelId </span>
+            @* C# Ternary operator (inline if-statment) *@  
+                            <li class="list-group-item d-flex justify-content-between align-items-center
+                                        @(sectie.Id == _geselecteerdeSectieId ? "active" : "") cursor-pointer"
+                @onclick="() => SelecteerSectie(sectie.Id)">
+                @sectie.Naam
+                <span class="badge bg-primary rounded-pill">ID: @sectie.Id</span>
+            </li>
         }
+    </ul>
+    @* . . . TEST CODE, UITGEBREID . . . *@  
+    @if (_geselecteerdeSectieId.HasValue)
+    {
+        <p class="mt-3">
+            Geselecteerde Sectie Id: @_geselecteerdeSectieId
+            @if (_geselecteerdeTafelId.HasValue)
+            {
+                <span> | Geselecteerde Tafel Id: @_geselecteerdeTafelId </span>
+            }
         </p>
     }
-        
-}  
+
+}
 
 @* --- ___TAFELS WEERGAVE___ --- (AANGEPAST VOOR KLIKBAARHEID EN ACTIEVE STATUS) *@  
-@if (_geselecteerdeSectieId.HasValue && _tafelsVanGeselecteerdeSectie != null)  
-{  
-    <h2 class="mt-4"> Tafels in Sectie @_geselecteerdeSectieId</h2>  
-    @if (!_tafelsVanGeselecteerdeSectie.Any())  
-    {  
-        <p>Er zijn geen tafels gevonden voor deze sectie</p>  
-    }  
-    else  
-    {  
-        <ul class="list-group">  
-            @foreach (var tafel in _tafelsVanGeselecteerdeSectie)  
-            {  
-                <li class="list-group-item d-flex justify-content-between align-items-center  
-                    @(tafel.ID == _geselecteerdeTafelId ? "active" : "") cursor-pointer"  
-                    @onclick="() => SelecteerTafel(tafel.ID)">  
-                    Tafel @tafel.TafelNummer  
-                    <span class="badge bg-info rounded-pill">@(tafel.IsBezet ? "Bezet" : "Vrij")</span>  
-                </li>      
-            }  
+@if (_geselecteerdeSectieId.HasValue && _tafelsVanGeselecteerdeSectie != null)
+{
+    <h2 class="mt-4"> Tafels in Sectie @_geselecteerdeSectieId</h2>
+    @if (!_tafelsVanGeselecteerdeSectie.Any())
+    {
+        <p>Er zijn geen tafels gevonden voor deze sectie</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var tafel in _tafelsVanGeselecteerdeSectie)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center
+                                            @(tafel.ID == _geselecteerdeTafelId ? "active" : "") cursor-pointer"
+                    @onclick="() => SelecteerTafel(tafel.ID)">
+                    Tafel @tafel.TafelNummer
+                    <span class="badge bg-info rounded-pill">@(tafel.IsBezet ? "Bezet" : "Vrij")</span>
+                </li>
+            }
 
-        </ul>         
-    }  
+        </ul>
+    }
+    @* PRODUCTEN WEERGAVE - Alleen zichtbaar als een tafel is geselecteerd *@
+    @if (_geselecteerdeTafelId.HasValue)
+    {
+        <hr class="my-4" />
+        <h2 class="mt-4">Producten voor Tafel @_geselecteerdeTafelId</h2>
+
+        @if (_categorieen == null)
+        {
+            <p><em>Laden van Categorieën...</em></p>
+        }
+        else if (!_categorieen.Any())
+        {
+            <p>Er zijn momenteel geen productcategorieën beschikbaar.</p>
+        }
+        else
+        {
+            <h3>Kies een Categorie:</h3>
+
+
+            var hoofdcategorieen = _categorieen.Where(c => !c.BovenCategorieID.HasValue).OrderBy(c => c.Naam).ToList();
+
+
+            @foreach (var hoofdcategorie in hoofdcategorieen)
+            {
+                <h4 class="mt-3 mb-2">@hoofdcategorie.Naam</h4>
+                <ul class="list-group list-group-horizontal flex-wrap mb-3">
+                    @{
+                        var subcategorieen = _categorieen.Where(c => c.BovenCategorieID == hoofdcategorie.ID).OrderBy(c => c.Naam).ToList();
+                    }
+                    @if (!subcategorieen.Any())
+                    {
+                        <li class="list-group-item @(hoofdcategorie.ID == _geselecteerdeCategorieId ? "active" : "") cursor-pointer"
+                            @onclick="() => SelecteerCategorie(hoofdcategorie.ID)">
+                            @hoofdcategorie.Naam (Directe producten)
+                        </li>
+                    }
+                    else
+                    {
+                        @foreach (var subcategorie in subcategorieen)
+                        {
+                            <li class="list-group-item @(subcategorie.ID == _geselecteerdeCategorieId ? "active" : "") cursor-pointer"
+                                @onclick="() => SelecteerCategorie(subcategorie.ID)">
+                                @subcategorie.Naam
+                            </li>
+                        }
+                    }
+                </ul>
+            }
+
+            @if (_geselecteerdeCategorieId.HasValue)
+            {
+                <h3 class="mt-4">Producten in Categorie: @(_categorieen.FirstOrDefault(c => c.ID == _geselecteerdeCategorieId)?.Naam ?? "Onbekend")</h3>
+                @if (_productenVanGeselecteerdeCategorie == null)
+                {
+                    <p><em>Laden van Producten...</em></p>
+                }
+                else if (!_productenVanGeselecteerdeCategorie.Any())
+                {
+                    <p>Geen producten gevonden in deze categorie.</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var product in _productenVanGeselecteerdeCategorie)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                @product.Naam
+                                <span class="badge bg-success rounded-pill">€ @product.Prijs.ToString("F2")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        }
+    }
+
 }
