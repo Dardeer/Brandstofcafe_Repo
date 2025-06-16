@@ -51,16 +51,22 @@ namespace NHL_Brandstofcafe.Services
             }
         }
 
-        // Producten methoden (Producten ophalen per categorie)
-        public async Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId) { 
-            using (var connection = GetConnection()) {
+        //Producten methoden(Producten ophalen per categorie)
+        public async Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId)
+        {
+            using (var connection = GetConnection())
+            {
 
-                string sql = @"
-                    SELECT ID, Naam, Prijs, CategorieID 
-                    FROM Producten
-                    Where CategorieID = @CategorieID"; // Sql parameterNaam
-                var producten = await connection.QueryAsync<Product>(sql, new { CategorieID = categorieId }); 
-                return producten.ToList();
+                string subCategoryIdsSql = @"
+                SELECT ID  FROM Categorieen
+                Where BovenCategorieID = @HoofdCategorieId";
+                var subCategoryIds = (await connection.QueryAsync<int>(subCategoryIdsSql, new { HoofdCategorieId = categorieId })).ToList();
+                var relevantCategoryIds = new List<int> { categorieId };
+                relevantCategoryIds.AddRange(subCategoryIds);
+                string productSql = @"SELECT ID, Naam, Prijs, CategorieID FROM Producten
+                                WHERE CategorieID IN @RelevantCategoryIds";
+                var Producten = await connection.QueryAsync<Product>(productSql, new { RelevantCategoryIds = relevantCategoryIds });
+                return Producten.ToList();
             }
         }
 
