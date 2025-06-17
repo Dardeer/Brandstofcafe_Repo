@@ -85,7 +85,7 @@
             }
         </div> @*____EINDE LINKER KOLOM____*@
 
-        @* Rechter Kolom: Categorieën & Producten *@
+        @* Rechter Kolom: Categorieën & Producten voor TafelID *@
         <div class="col md-7">
             @* Producten en categorieën alleen zichtbaar als een tafel is geselecteerd *@
             @if (_geselecteerdeTafelId.HasValue)
@@ -152,8 +152,11 @@
                                         @foreach (var product in _productenVanGeselecteerdeCategorie)
                                         {
                                             <li class=" list-group-item d-flex justify-content-between align-items-center">
-                                                @product.Naam
+                                                <div class="me-auto">@product.Naam</div>
                                                 <span class="badge bg-secondary rounded-pill">€@product.Prijs.ToString("F2")</span>
+                                                <button class="btn btn-sm btn-primary m-2" onclick="() => AddProductToOrder">
+                                                    Toevoegen
+                                                </button>
                                             </li>
                                         }
                                     </ul>
@@ -164,6 +167,41 @@
 
                     </div> @*EINDE CARD-BODY CATEGORIEEN & PRODUCTEN*@
                 </div> @* EINDE CATEGORIEEN & PRODUCTEN CARD *@
+
+                @*  START CARD-ORDERWEERGAVE  Huidige Bestelling Weergave *@
+                <div class="card shadow-sm mt-4">
+                    @* START CARD-HEADER ORDERWEERGAVE*@
+                    <div class="card-header bg-warning text-white"> 
+                        <h2 class=" h5 mb-0">Huidige bestelling voor Tafel @_geselecteerdeTafelId</h2>
+                    </div> @* EINDE CARD-HEADER ORDERWEERGAVE*@ 
+                        @* START CARD-BODY ORDERWEERGAVE*@
+                    <div class="card-body">
+                        @if (!_actieveTafelOrder.Any())
+                        {
+                            <p class="text-muted">Nog geen producten toegevoegen aan deze Order</p>
+                        }
+                        else
+                        {
+                            <ul class="list-group mb-3">
+                                @foreach (var item in _actieveTafelOrder)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div class="me-auto">
+                                            @item.ProductName
+                                            <span class="badge bg-secondary rounded-pill">x @item.Quantity</span>
+                                        </div>
+                                        <span>€ @item.TotalItemPrijs.ToString("F2")</span>
+                                    </li>
+                                }
+                            </ul>
+                                
+                                    //Totaal prijsbestelling berekenen
+                                decimal totaalprijsBestelling = _actieveTafelOrder.Sum(item => item.TotalItemPrijs);
+                                
+                            <h4 class="text-end">Totaal: <span class="badge bg-primary">€ @totaalprijsBestelling.ToString("F2")</span></h4>
+                        }
+                    </div> @* EIND CARD-BODY ORDERWEERGAVE*@
+                </div> @*EINDE CARD-ORDERWEERGAVE*@
             }
         </div> @*EINDE RECHTER KOLOM*@
     </div> @*EINDE ROW*@
@@ -171,6 +209,7 @@
 @* --- EINDE HTML/ RAZOR MARKUP --- *@  
 
 @code {
+
     // VARIABELEN VOOR DATA EN STATUS  - - - 
     private List<Sectie>? _secties;  
     private int? _geselecteerdeSectieId; // Houde de ID van de geselecteerde sectie bij  
@@ -213,14 +252,29 @@
         {  
             // Deselecteer tafel als dezelfde opnieuw wordt aangeklikt
             _geselecteerdeTafelId = null;
+            _geselecteerdeCategorieId = null;
+            _productenVanGeselecteerdeCategorie = null;
+            _actieveTafelOrder = new List<OrderItem>(); // order leeg maken bij deselectie
             Console.WriteLine($"Tafel ID {tafelId} gedeselecteerd.");
         }  
         else  
         {  
             // Selecteer de aangeklikte tafel
             _geselecteerdeTafelId = tafelId;  
+            _geselecteerdeCategorieId = null; // Reset geselecteerde categorie
+            _productenVanGeselecteerdeCategorie = null; // Reset producten
             Console.WriteLine($"Tafel geselecteerd: ID {tafelId}");  
-        }  
+        }
+
+        if (_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
+        {
+            _actieveTafelOrder = order; // functie: Bestaande orders van deze tafel ophalen
+        }
+        else
+        {
+            _actieveTafelOrder = new List<OrderItem>(); // Start met een lege order voor een nieuwe tafel
+        }
+        StateHasChanged(); // Zorgt dat de UI correct reageert
     }
 
     private async Task SelecteerCategorie(int categorieId)
@@ -236,6 +290,60 @@
             _geselecteerdeCategorieId = categorieId;
             Console.WriteLine($"Categorie geselecteerd: ID {categorieId}");
             _productenVanGeselecteerdeCategorie = await DataService.GetProductenByCategorieIdAsync(categorieId);
+        }
+    }
+
+    // OrderItem Klasse IN DIENST
+    public class OrderItem
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = String.Empty;
+        public decimal ProductPrijs { get; set; }
+        public int Quantity { get; set; } // hoeveelheid van het product in de order
+        public decimal TotalItemPrijs => Quantity * ProductPrijs;
+    }
+
+    // opslag voor bestillingen
+    private Dictionary<int, List<OrderItem>> _huidigeTafelOrders = new Dictionary<int, List<OrderItem>>();
+    // UI Weergave variabele
+    private List<OrderItem> _actieveTafelOrder = new List<OrderItem>();
+
+
+    //*-- AddProductToOrder Methode Maken *--
+    private void AddProductToOrder (Product product)
+    {
+        if (!_geselecteerdeTafelId.HasValue)
+        {
+            if (!_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
+            {
+                order = new List<OrderItem>();
+                _huidigeTafelOrders[_geselecteerdeTafelId.Value] = order;
+            }
+
+            var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
+            if (existingItem != null)
+            {
+                existingItem.Quantity++;
+            }
+            else
+            {
+                order.Add(new OrderItem
+                {
+                    ProductId = product.ID,
+                    ProductName = product.Naam,
+                    ProductPrijs = product.Prijs,
+                    Quantity = 1
+                });
+            }
+
+            _actieveTafelOrder = order; // Update de UI weergave
+            Console.WriteLine
+            ($" Product '{product.Naam}' toegevoegd aan order van Tafel {_geselecteerdeTafelId.Value}. Huidige item: {_actieveTafelOrder}");
+            // 5. Log voor debugging.
+            // Console.WriteLine(
+            //     $"Product '{product.Naam}' toegevoegd/bijgewerkt voor Tafel {_geselecteerdeTafelId.Value}. " +
+            //     $"Nieuwe hoeveelheid: {order.First(item => item.ProductId == product.ID).Quantity}. " +
+            //     $"Totaal items in order: {order.Count}");
         }
     }
 }  
