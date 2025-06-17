@@ -154,7 +154,7 @@
                                             <li class=" list-group-item d-flex justify-content-between align-items-center">
                                                 <div class="me-auto">@product.Naam</div>
                                                 <span class="badge bg-secondary rounded-pill">€@product.Prijs.ToString("F2")</span>
-                                                <button class="btn btn-sm btn-primary m-2" onclick="() => AddProductToOrder">
+                                                <button class="btn btn-sm btn-primary m-2" @onclick="() => AddProductToOrder(product)">
                                                     Toevoegen
                                                 </button>
                                             </li>
@@ -274,7 +274,8 @@
         {
             _actieveTafelOrder = new List<OrderItem>(); // Start met een lege order voor een nieuwe tafel
         }
-        StateHasChanged(); // Zorgt dat de UI correct reageert
+
+        StateHasChanged(); // Zorgt dat de UI correct reageert : de UI update na elke selectie, inclusief het bijwerken van de orderweergave.
     }
 
     private async Task SelecteerCategorie(int categorieId)
@@ -309,21 +310,24 @@
     private List<OrderItem> _actieveTafelOrder = new List<OrderItem>();
 
 
-    //*-- AddProductToOrder Methode Maken *--
+    @*-- AddProductToOrder Methode Maken *--*@
     private void AddProductToOrder (Product product)
     {
         if (!_geselecteerdeTafelId.HasValue)
-        {
+        { 
+            Console.WriteLine("Geen tafel geselecteerd om product aan toe te voegen.");
+            return;
+        }
             if (!_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
             {
                 order = new List<OrderItem>();
                 _huidigeTafelOrders[_geselecteerdeTafelId.Value] = order;
             }
-
             var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
             if (existingItem != null)
             {
                 existingItem.Quantity++;
+                Console.WriteLine($"Hoeveelheid van product '{product.Naam}' verhoogd naar {existingItem.Quantity} voor tafel {_geselecteerdeTafelId.Value}.");
             }
             else
             {
@@ -334,17 +338,22 @@
                     ProductPrijs = product.Prijs,
                     Quantity = 1
                 });
+                Console.WriteLine($"Product '{product.Naam}' nieuw toegevoegd aan order voor tafel {_geselecteerdeTafelId.Value}.");
             }
 
-            _actieveTafelOrder = order; // Update de UI weergave
-            Console.WriteLine
-            ($" Product '{product.Naam}' toegevoegd aan order van Tafel {_geselecteerdeTafelId.Value}. Huidige item: {_actieveTafelOrder}");
+            _actieveTafelOrder = order; 
+            StateHasChanged();
+
+             Console.WriteLine
+             ($"Huidig aantal items in bestelling voor Tafel {_geselecteerdeTafelId.Value}: {_actieveTafelOrder.Count}");
             // 5. Log voor debugging.
             // Console.WriteLine(
             //     $"Product '{product.Naam}' toegevoegd/bijgewerkt voor Tafel {_geselecteerdeTafelId.Value}. " +
             //     $"Nieuwe hoeveelheid: {order.First(item => item.ProductId == product.ID).Quantity}. " +
             //     $"Totaal items in order: {order.Count}");
-        }
-    }
-}  
+        
+        
+    }  
 
+
+}
