@@ -188,9 +188,18 @@
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         <div class="me-auto">
                                             @item.ProductName
-                                            <span class="badge bg-secondary rounded-pill">x @item.Quantity</span>
+                                            <div class="d-inline-flex - align-items-center ms-2"> @*Inline-flex om knoppen en aantal op een lijn te houden*@
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => UpdateOrderItemQuantity(item, -1)">-</button>
+                                                <span class="badge bg-secondary rounded-pill mx-1">x @item.Quantity</span>
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => UpdateOrderItemQuantity(item, 1)">+</button>
+                                            </div>
+                                        </div> @*EINDE me-auto*@
+
+                                        <div class="d-flex align-items-center"> @* Flex container voor prijs en verwijderknop *@
+                                        <span class="me-3">€ @item.TotalItemPrijs.ToString("F2")</span> @* me-3 voor marge rechts van de prijs *@
+                                        <button class="btn btn-sm btn-danger" @onclick="() => RemoveOrderItem(item)">Verwijder</button>
                                         </div>
-                                        <span>€ @item.TotalItemPrijs.ToString("F2")</span>
+
                                     </li>
                                 }
                             </ul>
@@ -318,42 +327,110 @@
             Console.WriteLine("Geen tafel geselecteerd om product aan toe te voegen.");
             return;
         }
-            if (!_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
-            {
-                order = new List<OrderItem>();
-                _huidigeTafelOrders[_geselecteerdeTafelId.Value] = order;
-            }
-            var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
-            if (existingItem != null)
-            {
-                existingItem.Quantity++;
-                Console.WriteLine($"Hoeveelheid van product '{product.Naam}' verhoogd naar {existingItem.Quantity} voor tafel {_geselecteerdeTafelId.Value}.");
-            }
-            else
-            {
-                order.Add(new OrderItem
+        if (!_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
+        {
+            order = new List<OrderItem>();
+            _huidigeTafelOrders[_geselecteerdeTafelId.Value] = order;
+        }
+        var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
+        if (existingItem != null)
+        {
+            existingItem.Quantity++;
+            Console.WriteLine($"Hoeveelheid van product '{product.Naam}' verhoogd naar {existingItem.Quantity} voor tafel {_geselecteerdeTafelId.Value}.");
+        }
+        else
+        {
+            order.Add(new OrderItem
                 {
                     ProductId = product.ID,
                     ProductName = product.Naam,
                     ProductPrijs = product.Prijs,
                     Quantity = 1
                 });
-                Console.WriteLine($"Product '{product.Naam}' nieuw toegevoegd aan order voor tafel {_geselecteerdeTafelId.Value}.");
+            Console.WriteLine($"Product '{product.Naam}' nieuw toegevoegd aan order voor tafel {_geselecteerdeTafelId.Value}.");
+        }
+
+        _actieveTafelOrder = order; 
+        StateHasChanged();
+
+        Console.WriteLine
+        ($"Huidig aantal items in bestelling voor Tafel {_geselecteerdeTafelId.Value}: {_actieveTafelOrder.Count}");
+        // 5. Log voor debugging.
+        // Console.WriteLine(
+        //     $"Product '{product.Naam}' toegevoegd/bijgewerkt voor Tafel {_geselecteerdeTafelId.Value}. " +
+        //     $"Nieuwe hoeveelheid: {order.First(item => item.ProductId == product.ID).Quantity}. " +
+        //     $"Totaal items in order: {order.Count}");
+
+
+    }
+
+    @* -- RemoveOrderItem-Methode: Product Verwijderen uit Order Methode -- *@
+    private void RemoveOrderItem(OrderItem itemToRemove)
+    {
+        if (!_geselecteerdeTafelId.HasValue)
+        {
+            Console.WriteLine("Geen tafel geselecteerd om product van te verwijderen.");
+            return;
+        }
+
+        // Order ophalen voor de geselecteerde tafel
+        if (_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
+        {
+            // verwijder het item uit de order van deze tafel
+            order.Remove(itemToRemove);
+            Console.WriteLine($"Product'{itemToRemove.ProductName}' verwijderd uit order voor tafel{_geselecteerdeTafelId.Value}");
+
+            if (!order.Any())
+            {
+                _huidigeTafelOrders.Remove(_geselecteerdeTafelId.Value); //Als er geen items meer zijn na verwijdering, verwijder de order van die tafel uit dictionary Lijst van <OrderItem>.
+                Console.WriteLine($"Order uit tafel {_geselecteerdeTafelId.Value} is nu leeg");
             }
+          
 
-            _actieveTafelOrder = order; 
-            StateHasChanged();
+            StateHasChanged(); // _actieveTafelOrder bijwerken voor weergave >>> UI UPDATEN
+        }
+    }
+    @* --- UpdateOrderItemQuantity-Methode: Hoeveelheid van Product in Order Aanpassen  --- *@
+    private void UpdateOrderItemQuantity( OrderItem itemToUpdate, int change)
+    {
+        if (!_geselecteerdeTafelId.HasValue)
+        {
+            Console.WriteLine("Geen tafel geselecteerd om producthoeveelheid aan te passen.");
+            return;
+        }
+        if (_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
+        {
+            // Zoek het item in de actuele order
+            var actualItem = order.FirstOrDefault(i => i.ProductId == itemToUpdate.ProductId); //(voor het geval 'itemToUpdate' een oudere referentie is)
+            if (actualItem != null)
+            {
+                actualItem.Quantity += change; // Pas de hoeveelheid aan
 
-             Console.WriteLine
-             ($"Huidig aantal items in bestelling voor Tafel {_geselecteerdeTafelId.Value}: {_actieveTafelOrder.Count}");
-            // 5. Log voor debugging.
-            // Console.WriteLine(
-            //     $"Product '{product.Naam}' toegevoegd/bijgewerkt voor Tafel {_geselecteerdeTafelId.Value}. " +
-            //     $"Nieuwe hoeveelheid: {order.First(item => item.ProductId == product.ID).Quantity}. " +
-            //     $"Totaal items in order: {order.Count}");
-        
-        
-    }  
+                if (actualItem.Quantity <= 0)
+                {
+                    order.Remove(actualItem); 
+                    Console.WriteLine($"Product '{actualItem.ProductName}' is verwijderd omdat de hoveelheid 0 of minder werd");    
+                }
+            }
+            
+            if (!order.Any())
+            {
+                _huidigeTafelOrders.Remove(_geselecteerdeTafelId.Value); // Als de order leeg is, verwijder deze uit de dictionary    
+                Console.WriteLine($" Order voor Tafel {_geselecteerdeTafelId.Value} is leeg");
+            }
+            else
+            {
+                Console.WriteLine($"Itelm '{itemToUpdate.ProductName}' Niet gevonden in de order van tafel {_geselecteerdeTafelId.Value} ");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Geen order gevonden voor tafel {_geselecteerdeTafelId.Value} om de hoveelheid aan te passen");    
+        }
+
+        StateHasChanged(); // UI bijwerken na wijziging
+    }
+    
 
 
 }
