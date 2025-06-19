@@ -11,6 +11,9 @@ namespace NHL_Brandstofcafe.Services
 
         Task<List<Categorie>> GetCategorieenAsync(); // Haalt asynchroon een lijst van alle Categorieën op.
         Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId); // Haalt asynchroon een lijst van alle Producten op, per categorie.
-        
+
+        // Asychroon een Lijst van Add-Ons ophalen, gefilterd op een specifieke ProductID.
+        Task<List<AddOn>> GetAddOnsByProductIdAsync(int productId);
+
     }
 }

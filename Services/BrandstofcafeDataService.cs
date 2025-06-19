@@ -71,12 +71,30 @@ namespace NHL_Brandstofcafe.Services
         }
 
         // Categorie methoden (Alle Categorieën ophalen)
-        public async Task<List<Categorie>> GetCategorieenAsync() {
-            using (var connection = GetConnection()) {
+        public async Task<List<Categorie>> GetCategorieenAsync()
+        {
+            using (var connection = GetConnection())
+            {
                 string sql = "SELECT ID, Naam, BovenCategorieID FROM Categorieen";
                 var categorieen = await connection.QueryAsync<Categorie>(sql);
                 return categorieen.ToList();
             }
         }
-    }
+        // AddOn Methode ophalen voor een specifiek product
+        public async Task<List<AddOn>> GetAddOnsByProductIdAsync (int productId)
+        {
+            using (var connection = GetConnection()) 
+            {
+                string sql =
+                    @" Select ID, Naam, Prijs, ProductId, GroepID 
+                        FROM AddOns 
+                        Where ProductID = @ProductId
+                    ";
+                var addOns = await connection.QueryAsync<AddOn>(sql, new { ProductId = productId });
+                return addOns.ToList();
+            }
+        }
+
+    }    
+        
 }

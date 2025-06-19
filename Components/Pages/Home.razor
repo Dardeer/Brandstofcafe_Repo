@@ -154,9 +154,43 @@
                                             <li class=" list-group-item d-flex justify-content-between align-items-center">
                                                 <div class="me-auto">@product.Naam</div>
                                                 <span class="badge bg-secondary rounded-pill">€@product.Prijs.ToString("F2")</span>
+                                                @*AddOns Knop*@
+                                                <button class="btn btn-sm btn-info m-2" @onclick="() => SelecteerProductVoorAddOns(product.ID)">
+                                                    AddOns
+                                                </button>
+                                                @*Toevoegen Knop*@
                                                 <button class="btn btn-sm btn-primary m-2" @onclick="() => AddProductToOrder(product)">
                                                     Toevoegen
                                                 </button>
+                                                @* !TOON Add-ons als er addons zijn voor een geselecteerde Product*@
+                                                @if (_geselecteerdProductVoorAddOnsId  == product.ID && _addOnsVanGeselecteerdProduct != null)
+                                                {
+                                                    <div class="w-100 mt-2">   @*AddOns CONTAINER*@ 
+                                                        @if (_addOnsVanGeselecteerdProduct.Any())   @*START Add-Ons Sectie*@
+                                                        {
+                                                            <h5> Beschikbare Add-Ons:</h5>
+                                                            <div class=" d-flex flex-wrap gap-2 mb-2"> @*START AddOns Flexbox*@
+                                                                @foreach (var addOn in _addOnsVanGeselecteerdProduct)
+                                                                {
+                                                                    <div class="form-check form-check-inline">  @*START AddOns FORM*@
+                                                                        <input class="form-check-input" 
+                                                                        type="checkbox" id="addOn-@addOn.ID"
+                                                                       @onchange="(e) => ToggleAddOn(addOn, Convert.ToBoolean(e.Value))"
+                                                                        checked ="@(_tempGeselecteerdeAddOns.Any(a => a.ID == addOn.ID))" />
+                                                                        <label class="form-check-label" for="addOn-@addOn.ID">
+                                                                            @addOn.Naam ( +€@addOn.Prijs.ToString("F2") )
+                                                                        </label>
+                                                                        
+                                                                    </div> @*EIND AddOns FORM*@
+                                                                }
+                                                            </div> @*EIND AddOns Flexbox*@
+                                                        }  @*EINDE Add-Ons Sectie*@
+                                                        else
+                                                        {
+                                                            <p class="text-muted small">Geen AddOns Beschikbaar voor dit Product!</p>    
+                                                        }
+                                                    </div> @*AddOns CONTAINER*@ 
+                                                }
                                             </li>
                                         }
                                     </ul>
@@ -193,6 +227,13 @@
                                                 <span class="badge bg-secondary rounded-pill mx-1">x @item.Quantity</span>
                                                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => UpdateOrderItemQuantity(item, 1)">+</button>
                                             </div>
+                                            @*AddOns in de order tonen*@
+                                            @if (item.SelectAddOns.Any())
+                                            {
+                                                <div class="smal text-muted ms-3">
+                                                    Add-ons: @string.Join(",", item.SelectAddOns.Select(async => async.Naam))
+                                                </div>
+                                            }
                                         </div> @*EINDE me-auto*@
 
                                         <div class="d-flex align-items-center"> @* Flex container voor prijs en verwijderknop *@
@@ -227,6 +268,9 @@
     private List<Categorie>? _categorieen; // Lijst van alle Categorieën
     private int? _geselecteerdeCategorieId;
     private List<Product>? _productenVanGeselecteerdeCategorie;
+    private List<AddOn>? _addOnsVanGeselecteerdProduct; // lijst om AddOns van een geselecteerd product vanuit GetAddOnsByProductIdAsync
+    private List<AddOn> _tempGeselecteerdeAddOns  = new List<AddOn>(); // tijdelijk om de geselecteerde AddOn voor een product bij te houden
+    private int? _geselecteerdProductVoorAddOnsId; // product's AddOns
 
     // Blazor LIFECYCLE METHODE  
     protected override async Task OnInitializedAsync()  
@@ -235,7 +279,7 @@
         _categorieen = await DataService.GetCategorieenAsync(); 
     }  
 
-    // --- EVENT HANELER : KLIK OP SECTIE ---
+    // --- EVENT HANDELER : KLIK OP SECTIE ---
 
     private async Task SelecteerSectie(int sectieId)  
     {  
@@ -252,7 +296,11 @@
             Console.WriteLine($"Sectie geselecteerd: ID {sectieId}"); 
             _tafelsVanGeselecteerdeSectie = await DataService.GetTafelsBySectieIdAsync(sectieId);  
             _geselecteerdeTafelId = null;  
-        }  
+        }
+        // Reset AddOns bij Sectie selectie
+        _geselecteerdProductVoorAddOnsId = null;
+        _addOnsVanGeselecteerdProduct = null;
+        _tempGeselecteerdeAddOns.Clear();
     }  
 
     private void SelecteerTafel(int tafelId)  
@@ -274,6 +322,11 @@
             _productenVanGeselecteerdeCategorie = null; // Reset producten
             Console.WriteLine($"Tafel geselecteerd: ID {tafelId}");  
         }
+        // Reaset AddOns bij Tafel selectie
+        _geselecteerdProductVoorAddOnsId = null;
+        _addOnsVanGeselecteerdProduct= null;
+        _tempGeselecteerdeAddOns.Clear(); // tijdelijke selectie van AddOns resetten
+
 
         if (_huidigeTafelOrders.TryGetValue(_geselecteerdeTafelId!.Value, out var order))
         {
@@ -301,6 +354,54 @@
             Console.WriteLine($"Categorie geselecteerd: ID {categorieId}");
             _productenVanGeselecteerdeCategorie = await DataService.GetProductenByCategorieIdAsync(categorieId);
         }
+        // Reset AddOns bij Categorie selectie
+        _geselecteerdProductVoorAddOnsId = null;
+        _addOnsVanGeselecteerdProduct = null;
+        _tempGeselecteerdeAddOns.Clear(); // tijdelijke selectie van AddOns resetten
+    }
+
+    
+    private async Task SelecteerProductVoorAddOns(int productId)
+    {
+        if (_geselecteerdProductVoorAddOnsId.HasValue && _geselecteerdProductVoorAddOnsId.Value == productId)
+        {
+            _geselecteerdProductVoorAddOnsId = null; // resetten voor nieuw product
+            _addOnsVanGeselecteerdProduct = null;
+            _tempGeselecteerdeAddOns.Clear();  // opruimen voor een schone lei
+            Console.WriteLine($"Add-ons voor Product ID {productId} is gedeselecteerd"); 
+        }
+        else
+        {
+            _geselecteerdProductVoorAddOnsId = productId;
+            _tempGeselecteerdeAddOns.Clear(); 
+            _addOnsVanGeselecteerdProduct = await DataService.GetAddOnsByProductIdAsync(productId);  // DATAHALEN VAM AddOns Table
+            Console.WriteLine($"Add-ons geladen voor ProductID {productId}. Aantal {_addOnsVanGeselecteerdProduct?.Count ?? 0}");
+        }
+        StateHasChanged();
+    }
+
+    // Methode on AddOn toevoegen of verwijderen uit een tijdelijke selectie
+    private void ToggleAddOn(AddOn addOn, bool isSelected)
+    {
+        if (isSelected)
+        {  
+            // 'Per Groep 1 keuze Logica'
+            if (!_tempGeselecteerdeAddOns.Any(a => a.ID == addOn.ID))
+            {
+                _tempGeselecteerdeAddOns.Add(addOn);
+                Console.WriteLine($"AddOn '{addOn.Naam}' is toegevoegd aan de tijdelijke selectie");
+            }
+        }
+        else
+        {
+            var existingAddOn = _tempGeselecteerdeAddOns.FirstOrDefault(a => a.ID == addOn.ID);
+            if (existingAddOn != null)
+            {
+                _tempGeselecteerdeAddOns.Remove(existingAddOn);
+                Console.WriteLine($"AddOn '{addOn.Naam}' is verwijderd");
+            }
+        }
+        StateHasChanged();
     }
 
     // OrderItem Klasse IN DIENST
@@ -310,7 +411,10 @@
         public string ProductName { get; set; } = String.Empty;
         public decimal ProductPrijs { get; set; }
         public int Quantity { get; set; } // hoeveelheid van het product in de order
-        public decimal TotalItemPrijs => Quantity * ProductPrijs;
+
+        // List om de geselecteerde AddOns voor een specifieke Item op te slaan
+        public List<AddOn> SelectAddOns { get; set; } = new List<AddOn>();
+        public decimal TotalItemPrijs => Quantity * (ProductPrijs + SelectAddOns.Sum(a => a.Prijs));
     }
 
     // opslag voor bestillingen
@@ -332,23 +436,25 @@
             order = new List<OrderItem>();
             _huidigeTafelOrders[_geselecteerdeTafelId.Value] = order;
         }
-        var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
-        if (existingItem != null)
-        {
-            existingItem.Quantity++;
-            Console.WriteLine($"Hoeveelheid van product '{product.Naam}' verhoogd naar {existingItem.Quantity} voor tafel {_geselecteerdeTafelId.Value}.");
-        }
-        else
-        {
+        // var existingItem = order.FirstOrDefault(item => item.ProductId == product.ID);
+        // if (existingItem != null)
+        // {
+        //     existingItem.Quantity++;
+        //     Console.WriteLine($"Hoeveelheid van product '{product.Naam}' verhoogd naar {existingItem.Quantity} voor tafel {_geselecteerdeTafelId.Value}.");
+        // }
             order.Add(new OrderItem
                 {
                     ProductId = product.ID,
                     ProductName = product.Naam,
                     ProductPrijs = product.Prijs,
-                    Quantity = 1
+                    Quantity = 1, SelectAddOns = new List<AddOn>(_tempGeselecteerdeAddOns) //
                 });
             Console.WriteLine($"Product '{product.Naam}' nieuw toegevoegd aan order voor tafel {_geselecteerdeTafelId.Value}.");
-        }
+        
+        // Reset de tijdelijke add-on variabelen:
+        _tempGeselecteerdeAddOns.Clear();
+        _geselecteerdProductVoorAddOnsId = null;
+        _addOnsVanGeselecteerdProduct = null; // 
 
         _actieveTafelOrder = order; 
         StateHasChanged();
@@ -385,9 +491,14 @@
                 _huidigeTafelOrders.Remove(_geselecteerdeTafelId.Value); //Als er geen items meer zijn na verwijdering, verwijder de order van die tafel uit dictionary Lijst van <OrderItem>.
                 Console.WriteLine($"Order uit tafel {_geselecteerdeTafelId.Value} is nu leeg");
             }
-          
+
 
             StateHasChanged(); // _actieveTafelOrder bijwerken voor weergave >>> UI UPDATEN
+        }
+        else
+        {
+            Console.WriteLine($"Geen order gevonden voor Tafel{_geselecteerdeTafelId.Value} om het item te verwijderen");    
+            StateHasChanged();
         }
     }
     @* --- UpdateOrderItemQuantity-Methode: Hoeveelheid van Product in Order Aanpassen  --- *@
