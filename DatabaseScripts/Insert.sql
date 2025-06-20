@@ -293,3 +293,36 @@ UPDATE BestellingExemplaren
 SET IsBetaald = TRUE
 WHERE Id IN (4, 5);
 -- EIND 2 Latte Macchiato's IsBetaald
+
+-- Initiële data voor Orders
+create table Orders (
+ID int not null auto_increment primary key,
+TafelID int not null,
+BestelDatum timestamp default current_timestamp,
+TotaalPrijs decimal(10, 2) not null default 0.00,
+Status varchar(50) not null default 'Open',
+foreign key (TafelID) references tafels(ID)
+);
+
+-- Initiële data voor OrderItem
+create table OrderItems (
+ID int auto_increment primary key,
+OrderID int not null,
+ProductID int not null,
+ProductName varchar(255) not null,
+ProductPrijs Decimal(10, 2) not null,
+Quantity int not null,
+foreign key (OrderID) references Orders(ID),
+foreign key (ProductID) references Producten(ID)
+);
+
+-- Initiële data voor OrderItemAddOns
+create table OrderItemAddOns (
+Id int auto_increment primary key,
+OrderItemID int not null,
+AddOnID int not null,
+AddOnName varchar(255) not null,
+AddOnPrijs Decimal (10, 2) not null,
+foreign key (OrderItemID) references orderitems(ID),
+foreign key (AddOnID) references AddOns(ID)
+)
