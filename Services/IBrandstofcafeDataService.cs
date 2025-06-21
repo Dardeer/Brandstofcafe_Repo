@@ -9,11 +9,16 @@ namespace NHL_Brandstofcafe.Services
         Task<List<Sectie>> GetSectiesAsync(); // Haalt asynchroon een lijst (List) van alle Secties op.
         Task<List<Tafel>> GetTafelsBySectieIdAsync(int sectieId); // Haalt asynchroon een lijst van Tafels op, gefilterd op een specifieke SectieID.
 
-        Task<List<Categorie>> GetCategorieenAsync(); // Haalt asynchroon een lijst van alle Categorieën op.
-        Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId); // Haalt asynchroon een lijst van alle Producten op, per categorie.
+        Task<List<Categorie>> GetCategorieenAsync(); // Haalt asynchroon een lijst van alle Categorieën op
+        Task<List<Product>> GetProductenByCategorieIdAsync(int categorieId); // Haalt asynchroon een lijst van alle Producten op, per categorie
 
         // Asychroon een Lijst van Add-Ons ophalen, gefilterd op een specifieke ProductID.
         Task<List<AddOn>> GetAddOnsByProductIdAsync(int productId);
+
+        Task SaveOrderAsync(Order order); // Slaat een Order asynchroon op in de database
+
+        Task<List<Order>> GetOpenOrdersForTableAsync(int tafelID); // Openstaande Orders voor een tafelID ophalen
+        Task UpdateTafelStatusAsync(int tafelID, bool isBezet); // Tafelstatus bijwerken 
 
     }
 }
